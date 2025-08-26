@@ -1,99 +1,100 @@
 // src/components/Carousel.js
 "use client";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 
 export default function Carousel() {
   const [mangas, setMangas] = useState([]);
-  const [index, setIndex] = useState(0);
-
-  // Carrega últimos 5 mangás da API
-  useEffect(() => {
-    async function fetchMangas() {
-      try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000"}/mangas`);
-        const data = await res.json();
-        setMangas((data || []).slice(0, 5)); // pega no máximo 5
-      } catch (e) {
-        console.error("Erro ao carregar mangás:", e);
-      }
-    }
-    fetchMangas();
-  }, []);
-
-  // Auto-play sem depender de função externa (evita warning de deps)
-  useEffect(() => {
-    if (mangas.length > 1) {
-      const id = setInterval(() => {
-        setIndex((i) => (i + 1) % mangas.length);
-      }, 4000);
-      return () => clearInterval(id);
-    }
-  }, [mangas]);
-
-  const prev = () =>
-    setIndex((i) => (mangas.length ? (i - 1 + mangas.length) % mangas.length : 0));
-  const next = () =>
-    setIndex((i) => (mangas.length ? (i + 1) % mangas.length : 0));
-
-  if (mangas.length === 0) {
-    return (
-      <div className="max-w-6xl mx-auto mt-6 text-center text-gray-500">
-        Nenhum mangá publicado ainda.
-      </div>
-    );
-  }
+  const [idx, setIdx] = useState(0);
 
   const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+  const placeholder = "/placeholder-cover.jpg";
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`${apiBase}/mangas`);
+        const data = await res.json();
+        // últimos 5 publicados (já vem DESC no backend)
+        setMangas((data || []).slice(0, 5));
+      } catch (e) {
+        console.error("Carousel fetch erro:", e);
+      }
+    })();
+  }, [apiBase]);
+
+  // autoplay 10s
+  useEffect(() => {
+    if (mangas.length <= 1) return;
+    const t = setInterval(() => setIdx((i) => (i + 1) % mangas.length), 10000);
+    return () => clearInterval(t);
+  }, [mangas.length]);
+
+  if (!mangas.length) return null;
+
+  const m = mangas[idx];
+  const coverSrc = (u) =>
+    u ? (u.startsWith("http") ? u : `${apiBase}${u}`) : placeholder;
 
   return (
-    <div className="relative max-w-6xl mx-auto mt-6 overflow-hidden rounded-lg shadow-lg">
-      <div
-        className="flex transition-transform duration-500"
-        style={{ transform: `translateX(-${index * 100}%)` }}
-      >
-        {mangas.map((m) => {
-          const src = m.coverUrl?.startsWith("http")
-            ? m.coverUrl
-            : `${apiBase}${m.coverUrl ?? ""}`;
+    <section className="bg-zinc-800 text-white py-6 px-4 md:px-8 overflow-hidden relative rounded-lg shadow">
+      <h2 className="text-xl font-semibold mb-6 text-center">
+        Últimos Mangás Publicados
+      </h2>
 
-          return (
-            <div key={m.id} className="min-w-full h-72 relative text-white">
+      <div className="relative overflow-hidden rounded-lg h-[380px] md:h-[440px]">
+        {/* fundo blur */}
+        <div
+          className="absolute inset-0 bg-cover bg-center blur-md brightness-50 scale-110"
+          style={{ backgroundImage: `url(${coverSrc(m.coverUrl)})` }}
+        />
+
+        {/* conteúdo */}
+        <div className="relative z-10 flex flex-col md:flex-row h-full px-2 sm:px-6 items-center justify-between">
+          <div className="text-left max-w-xl">
+            <h3 className="text-3xl font-bold drop-shadow">{m.title}</h3>
+            {m.synopsis && (
+              <p className="mt-4 text-gray-200">{m.synopsis}</p>
+            )}
+            {/* ajuste a rota quando tiver a página de detalhe */}
+            <a
+              href={`/manga/${m.id}`}
+              className="inline-block mt-6 px-4 py-2 bg-yellow-400 text-black rounded hover:bg-yellow-300"
+            >
+              Começar Leitura →
+            </a>
+          </div>
+
+          {/* capa recortada (desktop) */}
+          <div className="hidden md:block w-[240px] h-[340px] relative">
+            <div className="absolute inset-0 rounded shadow-lg overflow-hidden"
+                 style={{ clipPath: "polygon(20% 0%, 100% 0%, 100% 100%, 0% 100%)" }}>
               <Image
-                src={src}
+                src={coverSrc(m.coverUrl)}
                 alt={m.title}
                 fill
-                sizes="100vw"
-                className="object-cover brightness-75"
-                priority={m === mangas[0]}
+                sizes="240px"
+                className="object-cover"
+                priority
               />
-              <div className="absolute bottom-6 left-6">
-                <h3 className="text-xl font-bold">{m.title}</h3>
-                {m.synopsis && <p className="text-sm">{m.synopsis}</p>}
-              </div>
             </div>
-          );
-        })}
-      </div>
+          </div>
+        </div>
 
-      {mangas.length > 1 && (
-        <>
-          <button
-            onClick={prev}
-            className="absolute top-1/2 left-4 -translate-y-1/2 bg-black/50 text-white text-2xl px-3 py-1 rounded-full"
-            aria-label="Anterior"
-          >
-            ❮
-          </button>
-          <button
-            onClick={next}
-            className="absolute top-1/2 right-4 -translate-y-1/2 bg-black/50 text-white text-2xl px-3 py-1 rounded-full"
-            aria-label="Próximo"
-          >
-            ❯
-          </button>
-        </>
-      )}
-    </div>
+        {/* bolinhas */}
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+          {mangas.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setIdx(i)}
+              className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                i === idx ? "bg-white" : "bg-gray-500"
+              }`}
+              aria-label={`Ir para slide ${i + 1}`}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
