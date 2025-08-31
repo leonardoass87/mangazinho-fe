@@ -1,7 +1,8 @@
 import Navbar from "@/components/Navabar";
 import Carousel from "@/components/Carousel";
-import CardsGrid from "@/components/Cardsgrid";
+
 import Sidebar from "@/components/Sidebar";
+import CardsGrid from "@/components/CardsGrid";
 
 export default function Home() {
   return (
@@ -17,7 +18,7 @@ export default function Home() {
 
         <section className="mt-6 grid grid-cols-1 lg:grid-cols-4 gap-5">
           <div className="lg:col-span-3">
-            <CardsGrid /> {/* não use max-w/p-4 dentro */}
+            <CardsGrid/> {/* não use max-w/p-4 dentro */}
           </div>
           <div className="lg:col-span-1">
             <Sidebar /> {/* idem */}
