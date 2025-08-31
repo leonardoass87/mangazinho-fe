@@ -7,8 +7,9 @@ export default function Carousel() {
   const [mangas, setMangas] = useState([]);
   const [idx, setIdx] = useState(0);
 
-  const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
-  const placeholder = "/placeholder-cover.jpg";
+  const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api";
+  const filesBase = (process.env.NEXT_PUBLIC_FILES_URL ?? "http://localhost:3000") + "";
+  const placeholder = "/vercel.svg";
 
   useEffect(() => {
     (async () => {
@@ -34,7 +35,7 @@ export default function Carousel() {
 
   const m = mangas[idx];
   const coverSrc = (u) =>
-    u ? (u.startsWith("http") ? u : `${apiBase}${u}`) : placeholder;
+    u ? (u.startsWith("http") ? u : `${filesBase}${u}`) : placeholder;
 
   return (
     <section className="bg-zinc-800 text-white py-6 px-4 md:px-8 overflow-hidden relative rounded-lg shadow">

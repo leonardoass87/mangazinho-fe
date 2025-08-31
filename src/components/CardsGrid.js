@@ -7,8 +7,9 @@ import Link from "next/link"; // Importa o Link para fazer a navegação
 export default function CardsGrid() {
   const [mangas, setMangas] = useState([]);
 
-  const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
-  const placeholder = "/placeholder-cover.jpg";
+  const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api";
+  const filesBase = (process.env.NEXT_PUBLIC_FILES_URL ?? "http://localhost:3000") + "";
+  const placeholder = "/vercel.svg";
 
   useEffect(() => {
     (async () => {
@@ -28,8 +29,10 @@ export default function CardsGrid() {
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
       {mangas.map((m) => {
         const src = m.coverUrl
-          ? (m.coverUrl.startsWith("http") ? m.coverUrl : `${apiBase}${m.coverUrl}`)
+          ? (m.coverUrl.startsWith("http") ? m.coverUrl : `${filesBase}${m.coverUrl.startsWith('/') ? m.coverUrl : '/' + m.coverUrl}`)
           : placeholder;
+        
+        console.log('Manga:', m.title, 'coverUrl:', m.coverUrl, 'src:', src);
 
         return (
           <Link key={m.id} href={`/manga/${m.id}`} passHref>

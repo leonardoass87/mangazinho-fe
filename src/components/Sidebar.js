@@ -5,8 +5,9 @@ import Image from "next/image";
 
 export default function Sidebar() {
   const [mangas, setMangas] = useState([]);
-  const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
-  const placeholder = "/placeholder-cover.jpg"; // adicione em /public
+  const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api";
+  const filesBase = (process.env.NEXT_PUBLIC_FILES_URL ?? "http://localhost:3000") + "";
+  const placeholder = "/vercel.svg";
 
   useEffect(() => {
     (async () => {
@@ -30,7 +31,7 @@ export default function Sidebar() {
 
         {mangas.map((m) => {
           const src = m.coverUrl
-            ? (m.coverUrl.startsWith("http") ? m.coverUrl : `${apiBase}${m.coverUrl}`)
+            ? (m.coverUrl.startsWith("http") ? m.coverUrl : `${filesBase}${m.coverUrl}`)
             : placeholder;
 
           return (
