@@ -1,6 +1,7 @@
 "use client";
 import { useAuth } from '../contexts/AuthContext';
 import { useState } from 'react';
+import Link from 'next/link';
 
 export default function Navbar() {
   const { user, logout, isAdmin } = useAuth();
@@ -16,12 +17,12 @@ export default function Navbar() {
       <div className="font-bold text-lg">📚 Mangazinho</div>
       
       <nav className="space-x-4">
-        <a href="/" className="hover:underline">Home</a>
-        <a href="#" className="hover:underline">Todos</a>
+        <Link href="/" className="hover:underline">Home</Link>
+        <Link href="#" className="hover:underline">Todos</Link>
         {isAdmin() && (
-          <a href="/admin" className="bg-purple-600 hover:bg-purple-700 px-3 py-1 rounded text-sm transition">
+          <Link href="/admin" className="bg-purple-600 hover:bg-purple-700 px-3 py-1 rounded text-sm transition">
             Admin
-          </a>
+          </Link>
         )}
       </nav>
       
@@ -58,9 +59,9 @@ export default function Navbar() {
             )}
           </div>
         ) : (
-          <a href="/login" className="bg-indigo-500 hover:bg-indigo-600 px-4 py-2 rounded transition">
+          <Link href="/login" className="bg-indigo-500 hover:bg-indigo-600 px-4 py-2 rounded transition">
             Login
-          </a>
+          </Link>
         )}
       </div>
       

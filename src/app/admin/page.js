@@ -1,9 +1,14 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { useAuth } from "../../contexts/AuthContext";
 import AdminStats from "../../components/AdminStats";
 import SimpleMangaCard from "../../components/SimpleMangaCard";
 import ProtectedRoute from "../../components/ProtectedRoute";
+
+// Desabilitar prerenderização estática
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default function AdminPage() {
   const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api";
@@ -36,7 +41,7 @@ export default function AdminPage() {
     completed: 0
   });
 
-  async function refreshMangas() {
+  const refreshMangas = useCallback(async () => {
     try {
       const res = await fetch(`${apiBase}/mangas`, { 
         cache: "no-store",
@@ -55,11 +60,11 @@ export default function AdminPage() {
     } catch (e) {
       console.error(e);
     }
-  }
+  }, [apiBase, getAuthHeaders]);
 
   useEffect(() => {
     refreshMangas();
-  }, []);
+  }, [refreshMangas]);
 
 
 
@@ -186,7 +191,7 @@ export default function AdminPage() {
       <div className="max-w-7xl mx-auto p-6 text-white">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-          <a href="/" className="bg-gray-700 hover:bg-gray-600 transition px-4 py-2 rounded">← Home</a>
+          <Link href="/" className="bg-gray-700 hover:bg-gray-600 transition px-4 py-2 rounded">← Home</Link>
         </div>
 
       {/* Stats Cards */}

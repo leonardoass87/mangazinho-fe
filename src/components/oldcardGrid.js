@@ -2,23 +2,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
-
-// helper para resolver a URL da capa
-function resolveCoverUrl(m, filesBase, placeholder = "/vercel.svg") {
-  // tenta várias chaves possíveis vindas da API
-  const raw =
-    (m?.coverUrl ?? m?.cover ?? m?.cover_path ?? m?.coverPath ?? m?.capa ?? "").toString().trim();
-
-  if (!raw) return placeholder;
-
-  // se já for absoluta, retorna como está
-  if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
-
-  // garante a barra inicial e prefixa o domínio de arquivos
-  const path = raw.startsWith("/") ? raw : `/${raw}`;
-  return `${filesBase}${path}`;
-}
+import Link from "next/link"; // Importa o Link para fazer a navegação
 
 export default function CardsGrid() {
   const [mangas, setMangas] = useState([]);
@@ -30,10 +14,9 @@ export default function CardsGrid() {
   useEffect(() => {
     (async () => {
       try {
-        // sem cache pra refletir uploads novos
-        const res = await fetch(`${apiBase}/mangas`, { cache: "no-store" });
+        const res = await fetch(`${apiBase}/mangas`);
         const data = await res.json();
-        setMangas(Array.isArray(data) ? data : []);
+        setMangas(data || []);
       } catch (e) {
         console.error("Erro ao buscar mangás:", e);
       }
@@ -45,11 +28,18 @@ export default function CardsGrid() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
       {mangas.map((m) => {
-        const src = resolveCoverUrl(m, filesBase, placeholder);
+        const src = m.coverUrl
+          ? (m.coverUrl.startsWith("http") ? m.coverUrl : `${filesBase}${m.coverUrl.startsWith('/') ? m.coverUrl : '/' + m.coverUrl}`)
+          : placeholder;
+        
+        console.log('Manga:', m.title, 'coverUrl:', m.coverUrl, 'src:', src);
 
         return (
           <Link key={m.id} href={`/manga/${m.id}`} passHref>
-            <article className="bg-white/5 rounded-lg overflow-hidden shadow hover:-translate-y-0.5 hover:shadow-lg transition">
+            <article
+              className="bg-white/5 rounded-lg overflow-hidden shadow hover:-translate-y-0.5 hover:shadow-lg transition"
+              onClick={() => console.log(`Clicou no card do mangá: ${m.title}`)}  // Debug
+            >
               <div className="relative w-full h-64">
                 <Image
                   src={src}

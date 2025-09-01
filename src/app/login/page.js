@@ -1,7 +1,12 @@
 "use client";
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../contexts/AuthContext';
+
+// Desabilitar prerenderização estática
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -230,12 +235,12 @@ export default function LoginPage() {
 
           {/* Link para home */}
           <div className="mt-4 text-center">
-            <a
+            <Link
               href="/"
               className="text-gray-400 hover:text-white text-sm transition-colors"
             >
               ← Voltar para o site
-            </a>
+            </Link>
           </div>
         </div>
 

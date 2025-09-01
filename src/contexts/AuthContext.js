@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 const AuthContext = createContext();
 
@@ -15,13 +15,40 @@ export function AuthProvider({ children }) {
     const savedToken = localStorage.getItem('mangazinho_token');
     if (savedToken) {
       setToken(savedToken);
-      verifyToken(savedToken);
+      // Chamar verifyToken diretamente para evitar dependência circular
+      const checkToken = async () => {
+        try {
+          const response = await fetch(`${apiBase}/auth/me`, {
+            headers: {
+              'Authorization': `Bearer ${savedToken}`
+            }
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            setUser(data.user);
+          } else {
+            // Token inválido, limpar
+            setUser(null);
+            setToken(null);
+            localStorage.removeItem('mangazinho_token');
+          }
+        } catch (error) {
+          console.error('Erro ao verificar token:', error);
+          setUser(null);
+          setToken(null);
+          localStorage.removeItem('mangazinho_token');
+        } finally {
+          setLoading(false);
+        }
+      };
+      checkToken();
     } else {
       setLoading(false);
     }
-  }, []);
+  }, [apiBase]);
 
-  const verifyToken = async (tokenToVerify) => {
+  const verifyToken = useCallback(async (tokenToVerify) => {
     try {
       const response = await fetch(`${apiBase}/auth/me`, {
         headers: {
@@ -42,7 +69,7 @@ export function AuthProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [apiBase]);
 
   const login = async (username, password) => {
     try {
