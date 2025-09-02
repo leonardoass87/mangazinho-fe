@@ -7,14 +7,24 @@ export default function Carousel() {
   const [mangas, setMangas] = useState([]);
   const [idx, setIdx] = useState(0);
 
-  const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api";
-  const filesBase = (process.env.NEXT_PUBLIC_FILES_URL ?? "http://localhost:3000") + "";
+  const apiBase = process.env.NEXT_PUBLIC_API_URL;
+  const filesBase = process.env.NEXT_PUBLIC_FILES_URL;
   const placeholder = "/vercel.svg";
 
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`${apiBase}/mangas`);
+        const url = `${apiBase}/mangas`;
+        console.log("📡 Chamando API do Carousel:", url); // 🔍 log da URL
+        const res = await fetch(url);
+
+        if (!res.ok) {
+          // se não veio JSON, loga status e texto
+          const text = await res.text();
+          console.error("❌ Erro na resposta da API:", res.status, text);
+          return;
+        }
+
         const data = await res.json();
         // últimos 5 publicados (já vem DESC no backend)
         setMangas((data || []).slice(0, 5));
@@ -57,7 +67,6 @@ export default function Carousel() {
             {m.synopsis && (
               <p className="mt-4 text-gray-200">{m.synopsis}</p>
             )}
-            {/* ajuste a rota quando tiver a página de detalhe */}
             <a
               href={`/manga/${m.id}`}
               className="inline-block mt-6 px-4 py-2 bg-yellow-400 text-black rounded hover:bg-yellow-300"
@@ -68,8 +77,13 @@ export default function Carousel() {
 
           {/* capa recortada (desktop) */}
           <div className="hidden md:block w-[240px] h-[340px] relative">
-            <div className="absolute inset-0 rounded shadow-lg overflow-hidden"
-                 style={{ clipPath: "polygon(20% 0%, 100% 0%, 100% 100%, 0% 100%)" }}>
+            <div
+              className="absolute inset-0 rounded shadow-lg overflow-hidden"
+              style={{
+                clipPath:
+                  "polygon(20% 0%, 100% 0%, 100% 100%, 0% 100%)",
+              }}
+            >
               <Image
                 src={coverSrc(m.coverUrl)}
                 alt={m.title}

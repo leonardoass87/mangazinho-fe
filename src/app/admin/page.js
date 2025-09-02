@@ -8,7 +8,6 @@ import ProtectedRoute from "../../components/ProtectedRoute";
 
 // Desabilitar prerenderização estática
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 export default function AdminPage() {
   const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api";

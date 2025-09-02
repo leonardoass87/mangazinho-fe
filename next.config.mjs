@@ -14,7 +14,7 @@ const nextConfig = {
       {
         protocol: 'http',
         hostname: 'localhost',
-        port: '3000',
+        port: '4000',
         pathname: '/files/**',
       },
       {
@@ -30,10 +30,8 @@ const nextConfig = {
     ],
     unoptimized: true
   },
-  env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://mangazinho.site/api',
-    NEXT_PUBLIC_FILES_URL: process.env.NEXT_PUBLIC_FILES_URL || 'https://mangazinho.site'
-  }
+  // Removendo env hardcoded - agora usa arquivos .env
+  // As variáveis serão carregadas automaticamente dos arquivos .env
 };
 
 export default nextConfig;

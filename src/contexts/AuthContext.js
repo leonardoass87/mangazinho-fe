@@ -73,6 +73,7 @@ export function AuthProvider({ children }) {
 
   const login = async (username, password) => {
     try {
+      console.log("📡 Registro em:", `${apiBase}/auth/register`);
       const response = await fetch(`${apiBase}/auth/login`, {
         method: 'POST',
         headers: {
@@ -99,16 +100,19 @@ export function AuthProvider({ children }) {
 
   const register = async (username, email, password) => {
     try {
-      const response = await fetch(`${apiBase}/auth/register`, {
+      const url = `${apiBase}/auth/register`;
+      console.log("📡 Chamando registro em:", url); // 🔍 log da URL
+  
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ username, email, password })
       });
-
+  
       const data = await response.json();
-
+  
       if (response.ok) {
         setUser(data.user);
         setToken(data.token);
