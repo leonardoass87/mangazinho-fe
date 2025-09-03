@@ -8,7 +8,12 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(null);
 
-  const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api";
+  if (!process.env.NEXT_PUBLIC_API_URL) {
+    console.error("❌ NEXT_PUBLIC_API_URL não definido no .env.local");
+  }
+  const apiBase = process.env.NEXT_PUBLIC_API_URL;
+  console.log("📡 API Base:", apiBase);
+
 
   // Verificar token no localStorage ao carregar
   useEffect(() => {
