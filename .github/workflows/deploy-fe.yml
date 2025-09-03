@@ -3,25 +3,22 @@ name: Deploy Frontend
 on:
   push:
     branches:
-      - development  # roda o deploy quando houver commit na branch development / alterado a env.
+      - development
 
 jobs:
   deploy:
-    runs-on: self-hosted
-
+    runs-on: self-hosted  # 👈 roda no runner que você registrou na VM
     steps:
-      - name: Deploy to VM
-        uses: appleboy/ssh-action@v0.1.10
-        with:
-          host: ${{ secrets.VM_HOST }}
-          username: ${{ secrets.VM_USER }}
-          key: ${{ secrets.VM_SSH_KEY }}
-          port: 22
-          script: |
-            cd /home/dev/projects/mangazinho-fe
-            git fetch --all
-            git reset --hard origin/development
-            npm install --legacy-peer-deps
-            npm run build
-            pm2 restart mangazinho-fe --update-env || pm2 start "npm run start" --name "mangazinho-fe"
-            pm2 save
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Instalar dependências
+        run: npm install --legacy-peer-deps
+
+      - name: Build do projeto
+        run: npm run build
+
+      - name: Deploy com PM2
+        run: |
+          pm2 restart mangazinho-fe --update-env || pm2 start "npm run start" --name "mangazinho-fe"
+          pm2 save
