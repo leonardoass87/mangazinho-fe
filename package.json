@@ -3,9 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 4000",
-    "build": "next build",
-    "start": "next start -p 3001",
+    "dev": "cross-env NODE_ENV=development next dev -p 4000",
+    "build:dev": "cross-env NODE_ENV=development next build",
+    "start:dev": "cross-env NODE_ENV=development next start -p 4000",
+
+    "homolog": "cross-env NODE_ENV=homolog next build && cross-env NODE_ENV=homolog next start -p 4000",
+    "prod": "cross-env NODE_ENV=production next build && cross-env NODE_ENV=production next start -p 4000",
+
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "check": "node check-config.js"
@@ -20,6 +24,7 @@
     "tailwindcss": "^4",
     "eslint": "^9",
     "eslint-config-next": "15.5.0",
-    "@eslint/eslintrc": "^3"
+    "@eslint/eslintrc": "^3",
+    "cross-env": "^7.0.3"
   }
 }
