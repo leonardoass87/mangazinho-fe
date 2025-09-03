@@ -16,7 +16,7 @@ jobs:
         run: npm install --legacy-peer-deps
 
       - name: Build do projeto
-        run: npm run build
+        run: npm run build:dev
 
       - name: Deploy com PM2
         run: |
