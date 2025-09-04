@@ -15,7 +15,6 @@ export default function SimilarList({ items = [] }) {
       <div className="flex gap-3 overflow-x-auto pb-2">
         {data.map((it) => (
           <div key={it.id} className="bg-zinc-800 rounded-lg w-[150px] flex-shrink-0 p-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={it.cover} alt={it.title} className="w-full h-[200px] object-cover rounded" />
             <p className="text-center mt-2 text-sm">{it.title}</p>
           </div>

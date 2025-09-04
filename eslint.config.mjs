@@ -20,6 +20,13 @@ const eslintConfig = [
       "next-env.d.ts",
     ],
   },
+  {
+    rules: {
+      // 🔧 Desliga a regra chata do Next
+      "@next/next/no-document-import-in-page": "off",
+      "@next/next/no-img-element": "off", // não obriga trocar <img> por <Image />
+    },
+  },
 ];
 
 export default eslintConfig;

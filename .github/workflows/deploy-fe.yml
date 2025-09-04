@@ -7,7 +7,13 @@ on:
 
 jobs:
   deploy:
-    runs-on: self-hosted  # 👈 roda no runner que você registrou na VM
+    runs-on: self-hosted
+    environment: dev   # 👈 pega as variáveis do Environment DEV no GitHub
+    env:
+      APP_STAGE: ${{ vars.APP_STAGE }}
+      NEXT_PUBLIC_API_BASE: ${{ vars.NEXT_PUBLIC_API_BASE }}
+      API_BASE: ${{ vars.API_BASE }}
+
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
@@ -15,8 +21,8 @@ jobs:
       - name: Instalar dependências
         run: npm install --legacy-peer-deps
 
-      - name: Build do projeto
-        run: npm run build:dev
+      - name: Build do projeto (sempre prod, mas com env de DEV)
+        run: npm run build
 
       - name: Deploy com PM2
         run: |
