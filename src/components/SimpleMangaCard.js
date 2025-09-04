@@ -1,8 +1,8 @@
 "use client";
 import { useState } from 'react';
 import ChapterUpload from './ChapterUpload';
-
 export default function SimpleMangaCard({ manga, onEdit, onDelete, onUploadCover, onUploadChapter }) {
+  console.log("Manga recebido:", manga);
   const [showChapterUpload, setShowChapterUpload] = useState(false);
   const [coverFile, setCoverFile] = useState(null);
 
