@@ -6,6 +6,22 @@ export default function SimpleMangaCard({ manga, onEdit, onDelete, onUploadCover
   const [showChapterUpload, setShowChapterUpload] = useState(false);
   const [coverFile, setCoverFile] = useState(null);
 
+  const filesBase = process.env.NEXT_PUBLIC_FILES_URL ?? "http://localhost:3000";
+
+  const getCoverSrc = () => {
+    if (coverFile) {
+      return URL.createObjectURL(coverFile);
+    }
+    if (manga.coverUrl || manga.cover || manga.capa) {
+      const path = manga.coverUrl || manga.cover || manga.capa;
+      if (typeof path === "string" && path.startsWith("http")) {
+        return path; // já é URL completa
+      }
+      return `${filesBase}${path.startsWith("/") ? "" : "/"}${path}`;
+    }
+    return null;
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'completed': return 'bg-green-600';
@@ -64,6 +80,21 @@ export default function SimpleMangaCard({ manga, onEdit, onDelete, onUploadCover
   return (
     <>
       <div className="bg-black/20 rounded-lg p-4 border border-white/10 hover:border-white/20 transition">
+        {/* Thumbnail da capa */}
+        <div className="mb-3">
+          {getCoverSrc() ? (
+            <img
+              src={getCoverSrc()}
+              alt={`Capa de ${manga.title}`}
+              className="w-full h-40 object-cover rounded-md border border-white/20"
+            />
+          ) : (
+            <div className="w-full h-40 bg-gray-800 flex items-center justify-center text-sm text-gray-500 rounded-md">
+              Sem capa
+            </div>
+          )}
+        </div>
+
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
           <h3 className="font-semibold line-clamp-2 flex-1 mr-2">{manga.title}</h3>
