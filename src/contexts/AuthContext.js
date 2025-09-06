@@ -1,150 +1,245 @@
 "use client";
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
 
-const AuthContext = createContext();
+const AuthContext = createContext(null);
+
+// DEBUG ligado fora de produção ou se NEXT_PUBLIC_DEBUG=true
+const DEBUG =
+  process.env.NODE_ENV !== "production" ||
+  process.env.NEXT_PUBLIC_DEBUG === "true";
+
+// Helper para ler resposta sem “consumir” o stream original
+async function readResponseSafe(res) {
+  const clone = res.clone();
+  const text = await clone.text();
+  let json = null;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    // mantém null se não for JSON
+  }
+  return { text, json };
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(null);
 
-  if (!process.env.NEXT_PUBLIC_API_URL) {
-    console.error("❌ NEXT_PUBLIC_API_URL não definido no .env.local");
-  }
   const apiBase = process.env.NEXT_PUBLIC_API_URL;
-  console.log("📡 API Base:", apiBase);
 
+  if (!apiBase) {
+    console.error("❌ NEXT_PUBLIC_API_URL não definido no .env do FRONT");
+  } else if (DEBUG) {
+    console.log("📡 [Auth] API Base:", apiBase);
+  }
 
-  // Verificar token no localStorage ao carregar
+  // ---------- boot: ler token do localStorage e validar ----------
   useEffect(() => {
-    const savedToken = localStorage.getItem('mangazinho_token');
-    if (savedToken) {
-      setToken(savedToken);
-      // Chamar verifyToken diretamente para evitar dependência circular
-      const checkToken = async () => {
-        try {
-          const response = await fetch(`${apiBase}/auth/me`, {
-            headers: {
-              'Authorization': `Bearer ${savedToken}`
-            }
-          });
+    const savedToken =
+      typeof window !== "undefined"
+        ? localStorage.getItem("mangazinho_token")
+        : null;
 
-          if (response.ok) {
-            const data = await response.json();
-            setUser(data.user);
-          } else {
-            // Token inválido, limpar
-            setUser(null);
-            setToken(null);
-            localStorage.removeItem('mangazinho_token');
+    if (savedToken && apiBase) {
+      setToken(savedToken);
+      (async () => {
+        try {
+          if (DEBUG) {
+            console.group("[Auth] verify on boot");
+            console.log("GET", `${apiBase}/auth/me`);
           }
-        } catch (error) {
-          console.error('Erro ao verificar token:', error);
-          setUser(null);
-          setToken(null);
-          localStorage.removeItem('mangazinho_token');
+          const res = await fetch(`${apiBase}/auth/me`, {
+            headers: { Authorization: `Bearer ${savedToken}` },
+          });
+          const { text, json } = await readResponseSafe(res);
+
+          if (DEBUG) {
+            console.log("status:", res.status, "ok:", res.ok);
+            console.log("raw:", text);
+            console.log("json:", json);
+          }
+
+          if (res.ok && json && json.user) {
+            setUser(json.user);
+          } else {
+            if (DEBUG)
+              console.warn("[Auth] token inválido ao iniciar, limpando...");
+            logout();
+          }
+        } catch (err) {
+          console.error("[Auth] erro ao verificar token no boot:", err);
+          logout();
         } finally {
           setLoading(false);
+          if (DEBUG) console.groupEnd?.();
         }
-      };
-      checkToken();
+      })();
     } else {
       setLoading(false);
     }
   }, [apiBase]);
 
-  const verifyToken = useCallback(async (tokenToVerify) => {
-    try {
-      const response = await fetch(`${apiBase}/auth/me`, {
-        headers: {
-          'Authorization': `Bearer ${tokenToVerify}`
+  // ---------- verifyToken sob demanda ----------
+  const verifyToken = useCallback(
+    async (tokenToVerify) => {
+      if (!apiBase) return;
+      try {
+        if (DEBUG) {
+          console.group("[Auth] verifyToken");
+          console.log("GET", `${apiBase}/auth/me`);
         }
-      });
+        const res = await fetch(`${apiBase}/auth/me`, {
+          headers: { Authorization: `Bearer ${tokenToVerify}` },
+        });
+        const { text, json } = await readResponseSafe(res);
 
-      if (response.ok) {
-        const data = await response.json();
-        setUser(data.user);
-      } else {
-        // Token inválido, limpar
+        if (DEBUG) {
+          console.log("status:", res.status, "ok:", res.ok);
+          console.log("raw:", text);
+          console.log("json:", json);
+        }
+
+        if (res.ok && json && json.user) {
+          setUser(json.user);
+        } else {
+          logout();
+        }
+      } catch (err) {
+        console.error("[Auth] erro verifyToken:", err);
         logout();
+      } finally {
+        setLoading(false);
+        if (DEBUG) console.groupEnd?.();
       }
-    } catch (error) {
-      console.error('Erro ao verificar token:', error);
-      logout();
-    } finally {
-      setLoading(false);
-    }
-  }, [apiBase]);
+    },
+    [apiBase]
+  );
 
+  // ---------- login ----------
   const login = async (username, password) => {
+    if (!apiBase) {
+      return { success: false, message: "API não configurada (NEXT_PUBLIC_API_URL)" };
+    }
+
+    const url = `${apiBase}/auth/login`;
+    const payload = { username, password };
+
     try {
-      console.log("📡 Registro em:", `${apiBase}/auth/register`);
-      const response = await fetch(`${apiBase}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ username, password })
+      if (DEBUG) {
+        console.group("[Auth] login");
+        console.log("POST", url);
+        console.log("payload:", { username, passwordLen: password?.length ?? 0 }); // não loga senha
+      }
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // Se o back usar cookie httpOnly, habilite:
+        // credentials: "include",
+        body: JSON.stringify(payload),
       });
 
-      const data = await response.json();
+      const { text, json } = await readResponseSafe(res);
 
-      if (response.ok) {
-        setUser(data.user);
-        setToken(data.token);
-        localStorage.setItem('mangazinho_token', data.token);
-        return { success: true, message: data.message };
-      } else {
-        return { success: false, message: data.error };
+      if (DEBUG) {
+        console.log("status:", res.status, "ok:", res.ok);
+        console.log("raw:", text);
+        console.log("json:", json);
       }
-    } catch (error) {
-      console.error('Erro no login:', error);
-      return { success: false, message: 'Erro de conexão' };
+
+      if (!res.ok) {
+        const msg = (json && (json.message || json.error)) || `HTTP ${res.status}`;
+        return { success: false, message: msg };
+      }
+
+      if (json && json.token) {
+        setToken(json.token);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("mangazinho_token", json.token);
+        }
+      }
+      if (json && json.user) {
+        setUser(json.user);
+      }
+      return { success: true, message: (json && json.message) || "Login OK", data: json };
+    } catch (err) {
+      console.error("[Auth] erro login fetch:", err);
+      return { success: false, message: "Erro de conexão" };
+    } finally {
+      if (DEBUG) console.groupEnd?.();
     }
   };
 
+  // ---------- register ----------
   const register = async (username, email, password) => {
+    if (!apiBase) {
+      return { success: false, message: "API não configurada (NEXT_PUBLIC_API_URL)" };
+    }
+
+    const url = `${apiBase}/auth/register`;
+    const payload = { username, email, password };
+
     try {
-      const url = `${apiBase}/auth/register`;
-      console.log("📡 Chamando registro em:", url); // 🔍 log da URL
-  
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ username, email, password })
-      });
-  
-      const data = await response.json();
-  
-      if (response.ok) {
-        setUser(data.user);
-        setToken(data.token);
-        localStorage.setItem('mangazinho_token', data.token);
-        return { success: true, message: data.message };
-      } else {
-        return { success: false, message: data.error };
+      if (DEBUG) {
+        console.group("[Auth] register");
+        console.log("POST", url);
+        console.log("payload:", { username, email, passwordLen: password?.length ?? 0 });
       }
-    } catch (error) {
-      console.error('Erro no registro:', error);
-      return { success: false, message: 'Erro de conexão' };
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // credentials: "include",
+        body: JSON.stringify(payload),
+      });
+
+      const { text, json } = await readResponseSafe(res);
+
+      if (DEBUG) {
+        console.log("status:", res.status, "ok:", res.ok);
+        console.log("raw:", text);
+        console.log("json:", json);
+      }
+
+      if (!res.ok) {
+        const msg = (json && (json.message || json.error)) || `HTTP ${res.status}`;
+        return { success: false, message: msg };
+      }
+
+      if (json && json.token) {
+        setToken(json.token);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("mangazinho_token", json.token);
+        }
+      }
+      if (json && json.user) {
+        setUser(json.user);
+      }
+      return { success: true, message: (json && json.message) || "Registro OK", data: json };
+    } catch (err) {
+      console.error("[Auth] erro register fetch:", err);
+      return { success: false, message: "Erro de conexão" };
+    } finally {
+      if (DEBUG) console.groupEnd?.();
     }
   };
 
+  // ---------- logout ----------
   const logout = () => {
+    if (DEBUG) console.log("[Auth] logout");
     setUser(null);
     setToken(null);
-    localStorage.removeItem('mangazinho_token');
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("mangazinho_token");
+    }
   };
 
-  const isAdmin = () => {
-    return user && user.role === 1;
-  };
+  // ---------- helpers ----------
+  const isAdmin = () => !!user && Number(user.role) === 1;
 
-  const getAuthHeaders = () => {
-    return token ? { 'Authorization': `Bearer ${token}` } : {};
-  };
+  const getAuthHeaders = () =>
+    token ? { Authorization: `Bearer ${token}` } : {};
 
   const value = {
     user,
@@ -154,20 +249,15 @@ export function AuthProvider({ children }) {
     register,
     logout,
     isAdmin,
-    getAuthHeaders
+    getAuthHeaders,
+    verifyToken, // exposto caso queira chamar manualmente
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
-  }
-  return context;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth deve ser usado dentro de um AuthProvider");
+  return ctx;
 }

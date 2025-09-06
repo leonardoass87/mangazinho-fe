@@ -1,25 +1,53 @@
 "use client";
 import { useState } from 'react';
 import ChapterUpload from './ChapterUpload';
+
 export default function SimpleMangaCard({ manga, onEdit, onDelete, onUploadCover, onUploadChapter }) {
-  console.log("Manga recebido:", manga);
   const [showChapterUpload, setShowChapterUpload] = useState(false);
   const [coverFile, setCoverFile] = useState(null);
 
-  const filesBase = process.env.NEXT_PUBLIC_FILES_URL ?? "http://localhost:3000";
+  const DEBUG =
+    process.env.NODE_ENV !== 'production' ||
+    process.env.NEXT_PUBLIC_DEBUG === 'true';
+
+  // Base da API (4000). Preferimos usar sempre a API como base para construir /files/**
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+
+  // Helpers
+  const trimSlashEnd = (s) => s?.endsWith('/') ? s.slice(0, -1) : s;
+  const trimSlashStart = (s) => s?.startsWith('/') ? s.slice(1) : s;
+  const joinUrl = (base, part) => `${trimSlashEnd(base)}/${trimSlashStart(part)}`;
 
   const getCoverSrc = () => {
+    // Preview local quando o usuário acabou de escolher o arquivo
     if (coverFile) {
-      return URL.createObjectURL(coverFile);
+      const url = URL.createObjectURL(coverFile);
+      if (DEBUG) console.log('[SimpleMangaCard] cover preview (blob):', url);
+      return url;
     }
-    if (manga.coverUrl || manga.cover || manga.capa) {
-      const path = manga.coverUrl || manga.cover || manga.capa;
-      if (typeof path === "string" && path.startsWith("http")) {
-        return path; // já é URL completa
-      }
-      return `${filesBase}${path.startsWith("/") ? "" : "/"}${path}`;
+
+    // Prioridades de campos vindos do back
+    const path = manga?.coverUrl || manga?.cover || manga?.capa;
+    if (!path) return null;
+
+    // Se já veio absoluta, usa direto
+    if (typeof path === 'string' && /^https?:\/\//i.test(path)) {
+      if (DEBUG) console.log('[SimpleMangaCard] cover abs URL:', path);
+      return path;
     }
-    return null;
+
+    // Se veio relativo começando com /files, prefixa a API (ex.: http://localhost:4000/files/...)
+    if (typeof path === 'string' && path.startsWith('/files')) {
+      const finalUrl = joinUrl(apiBase, path);
+      if (DEBUG) console.log('[SimpleMangaCard] cover rel with /files →', finalUrl);
+      return finalUrl;
+    }
+
+    // Caso contrário, considere que o back salva só o "mangas/xxx/cover.jpg"
+    // então montamos API + /files/ + path
+    const finalUrl = joinUrl(apiBase, joinUrl('/files', path));
+    if (DEBUG) console.log('[SimpleMangaCard] cover rel without /files →', finalUrl);
+    return finalUrl;
   };
 
   const getStatusColor = (status) => {
@@ -40,51 +68,63 @@ export default function SimpleMangaCard({ manga, onEdit, onDelete, onUploadCover
 
   const handleUploadChapter = async (mangaId, number, title, pages) => {
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api";
-      
+      const api = apiBase; // já é 4000
+      if (DEBUG) console.log('[SimpleMangaCard] uploadChapter API:', api);
+
       // Primeiro criar o capítulo
-      const chapterRes = await fetch(`${apiBase}/mangas/${mangaId}/chapters`, {
+      const chapterRes = await fetch(`${api}/mangas/${mangaId}/chapters`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...onUploadChapter.getAuthHeaders()
+          // ⚠️ Se onUploadChapter na verdade é o hook do Auth (e não a função),
+          // você deveria passar getAuthHeaders via props separado.
+          ...(onUploadChapter?.getAuthHeaders ? onUploadChapter.getAuthHeaders() : {})
         },
         body: JSON.stringify({ number: Number(number), title: title || null }),
       });
 
+      if (DEBUG) console.log('[SimpleMangaCard] create chapter status:', chapterRes.status);
+
       if (!chapterRes.ok) {
-        throw new Error('Falha ao criar capítulo');
+        const errText = await chapterRes.text().catch(() => '');
+        throw new Error(`Falha ao criar capítulo: HTTP ${chapterRes.status} ${errText}`);
       }
 
       // Depois fazer upload das páginas
       const form = new FormData();
       pages.forEach(page => form.append('pages', page));
 
-      const pagesRes = await fetch(`${apiBase}/mangas/${mangaId}/chapters/${number}/pages`, {
+      const pagesRes = await fetch(`${api}/mangas/${mangaId}/chapters/${number}/pages`, {
         method: 'POST',
-        headers: onUploadChapter.getAuthHeaders(),
+        headers: onUploadChapter?.getAuthHeaders ? onUploadChapter.getAuthHeaders() : undefined,
         body: form,
       });
 
+      if (DEBUG) console.log('[SimpleMangaCard] upload pages status:', pagesRes.status);
+
       if (!pagesRes.ok) {
-        throw new Error('Falha ao enviar páginas');
+        const errText = await pagesRes.text().catch(() => '');
+        throw new Error(`Falha ao enviar páginas: HTTP ${pagesRes.status} ${errText}`);
       }
 
       // Atualizar a lista
-      onUploadChapter.refreshMangas();
+      onUploadChapter?.refreshMangas?.();
     } catch (error) {
+      if (DEBUG) console.error('[SimpleMangaCard] handleUploadChapter error:', error);
       throw new Error(error.message);
     }
   };
+
+  const coverSrc = getCoverSrc();
 
   return (
     <>
       <div className="bg-black/20 rounded-lg p-4 border border-white/10 hover:border-white/20 transition">
         {/* Thumbnail da capa */}
         <div className="mb-3">
-          {getCoverSrc() ? (
+          {coverSrc ? (
             <img
-              src={getCoverSrc()}
+              src={coverSrc}
               alt={`Capa de ${manga.title}`}
               className="w-full h-40 object-cover rounded-md border border-white/20"
             />

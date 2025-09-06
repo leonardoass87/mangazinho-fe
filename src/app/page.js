@@ -1,4 +1,4 @@
-import Navbar from "@/components/Navabar";
+import Navbar from "@/components/Navbar";
 import Carousel from "@/components/Carousel";
 
 import Sidebar from "@/components/Sidebar";

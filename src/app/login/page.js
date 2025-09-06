@@ -7,6 +7,11 @@ import { useAuth } from '../../contexts/AuthContext';
 // Desabilitar prerenderização estática
 export const dynamic = 'force-dynamic';
 
+// DEBUG: ligado fora de produção ou se NEXT_PUBLIC_DEBUG=true
+const DEBUG =
+  process.env.NODE_ENV !== 'production' ||
+  process.env.NEXT_PUBLIC_DEBUG === 'true';
+
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
@@ -29,6 +34,16 @@ export default function LoginPage() {
     setSuccess('');
 
     try {
+      if (DEBUG) {
+        console.group('[LoginPage] handleSubmit');
+        console.log('isLogin:', isLogin);
+        console.log('payload:', {
+          username: formData.username,
+          email: !isLogin ? formData.email : undefined,
+          passwordLen: formData.password?.length ?? 0
+        });
+      }
+
       let result;
 
       if (isLogin) {
@@ -38,37 +53,56 @@ export default function LoginPage() {
         // Registro
         if (formData.password !== formData.confirmPassword) {
           setError('As senhas não coincidem');
+          if (DEBUG) {
+            console.warn('[LoginPage] senha e confirmação divergentes');
+            console.groupEnd?.();
+          }
           setLoading(false);
           return;
         }
         if (formData.password.length < 6) {
           setError('A senha deve ter pelo menos 6 caracteres');
+          if (DEBUG) {
+            console.warn('[LoginPage] senha curta (<6)');
+            console.groupEnd?.();
+          }
           setLoading(false);
           return;
         }
         result = await register(formData.username, formData.email, formData.password);
       }
 
-      if (result.success) {
-        setSuccess(result.message);
+      if (DEBUG) {
+        console.log('result from AuthContext:', result);
+      }
+
+      if (result?.success) {
+        setSuccess(result.message || (isLogin ? 'Login OK' : 'Registro OK'));
+        if (DEBUG) console.log('[LoginPage] sucesso → redirecionando para "/" em 1.5s');
         setTimeout(() => {
           router.push('/');
         }, 1500);
       } else {
-        setError(result.message);
+        setError(result?.message || 'Falha no login/registro');
+        if (DEBUG) console.warn('[LoginPage] falha:', result?.message);
       }
-    } catch (error) {
+    } catch (err) {
+      console.error('[LoginPage] erro inesperado', err);
       setError('Erro inesperado. Tente novamente.');
     } finally {
       setLoading(false);
+      if (DEBUG) console.groupEnd?.();
     }
   };
 
   const handleInputChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    if (DEBUG && name !== 'password' && name !== 'confirmPassword') {
+      // Evita logar senha; útil para ver o fluxo de digitação
+      console.log('[LoginPage] input change:', { [name]: value });
+    }
   };
 
   const toggleMode = () => {
@@ -81,6 +115,7 @@ export default function LoginPage() {
       password: '',
       confirmPassword: ''
     });
+    if (DEBUG) console.log('[LoginPage] toggleMode → isLogin:', !isLogin);
   };
 
   return (
@@ -92,6 +127,11 @@ export default function LoginPage() {
           <p className="text-gray-300">
             {isLogin ? 'Entre na sua conta' : 'Crie sua conta'}
           </p>
+          {DEBUG && (
+            <p className="text-xs text-yellow-200 mt-2">
+              DEBUG ON — API: {process.env.NEXT_PUBLIC_API_URL || '(não definida)'}
+            </p>
+          )}
         </div>
 
         {/* Card de Login/Registro */}
